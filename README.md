@@ -1,24 +1,51 @@
- 
+# 🧠 MindMaze — ein RL-Agent lernt live das Labyrinth
 
+> Ein **hackbert-Projekt** für MakeCode Arcade (Python).
+> Schau einer künstlichen Intelligenz beim Lernen zu — in echtzeit, auf einem Retro-Bildschirm.
 
-> Diese Seite bei [https://hackbert301009.github.io/ai-projekt/](https://hackbert301009.github.io/ai-projekt/) öffnen
+Ein Agent steht unten links (**S**), das Ziel wartet oben rechts (**Z**), dazwischen zwei
+fiese Wand-Riegel. Per **tabularem Q-Learning** (ε-greedy) tastet sich der Agent Episode
+für Episode an den optimalen Weg heran. Seine gelernte **Value-Funktion** wird als
+Heatmap (kalt → heiß) eingefärbt, seine **Strategie** als Pfeile pro Feld dargestellt.
 
-## Als Erweiterung verwenden
+Kein Trainingsdatensatz, keine Cloud — die ganze Intelligenz entsteht direkt auf dem Gerät.
 
-Dieses Repository kann als **Erweiterung** in MakeCode hinzugefügt werden.
+## 🎮 Steuerung (ab Etappe 6)
+
+| Taste | Wirkung |
+|-------|---------|
+| **A** | Pause / Weiter |
+| **B** | Lerntempo umschalten |
+| **↑** | Policy-Pfeile ein / aus |
+| **↓** | Zurücksetzen & neu lernen |
+
+## 🗺️ Etappenplan
+
+Das Projekt wächst in nachvollziehbaren, einzeln testbaren Etappen:
+
+1. **Die Welt** ✅ — Gitter, Wände, Start & Ziel
+2. **Der Wanderer** ✅ — Agent bewegt sich zufällig, Kollision, Reset am Ziel
+3. **Das Gehirn** — Q-Tabelle, ε-greedy, Lernregel
+4. **Die Heatmap** — Value-Funktion als Farbverlauf
+5. **Die Strategie** — Policy-Pfeile pro Feld
+6. **Der Feinschliff** — Steuerung, HUD, Politur
+
+## ✏️ Dieses Projekt in MakeCode bearbeiten
 
 * öffne [https://arcade.makecode.com/](https://arcade.makecode.com/)
-* klicke auf **Neues Projekt**
-* klicke auf **Erweiterungen** unter dem Zahnrad-Menü
-* nach **https://github.com/hackbert301009/ai-projekt** suchen und importieren
+* **Importieren** → **Importiere URL**
+* **https://github.com/hackbert301009/AI-Projekt** einfügen und importieren
+* mit dem **GitHub-Symbol** (unten links) holst du neue Etappen per **„Änderungen abrufen"**
 
-## Dieses Projekt bearbeiten
+## 🧩 Als Erweiterung verwenden
 
-Um dieses Repository in MakeCode zu bearbeiten.
+Dieses Repository kann als **Erweiterung** in MakeCode hinzugefügt werden:
 
 * öffne [https://arcade.makecode.com/](https://arcade.makecode.com/)
-* klicke auf **Importieren** und dann auf **Importiere URL**
-* füge **https://github.com/hackbert301009/ai-projekt** ein und klicke auf Importieren
+* **Neues Projekt** → unter dem Zahnrad-Menü auf **Erweiterungen**
+* nach **https://github.com/hackbert301009/AI-Projekt** suchen und importieren
+
+---
 
 #### Metadaten (verwendet für Suche, Rendering)
 
