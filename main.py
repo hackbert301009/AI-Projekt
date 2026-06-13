@@ -74,17 +74,14 @@ best_steps = 9999    # kürzeste je gefundene Strecke zum Ziel
 
 # ---------- Q-Tabelle: das Gedächtnis des Agenten ----------
 # q_table[zustand][aktion] = geschätzter Wert (erwartete künftige Belohnung).
-# Wir bauen sie mit Schleifen auf (das Static-Python von MakeCode mag keine
-# List-Comprehensions oder "[0]*n"-Tricks). Start: überall 0 -> er weiss nichts.
-q_table = []
-_s = 0
+# Wichtig fürs statische Python von MakeCode: wir starten die Liste mit einem
+# konkreten, typisierten Element (eine Zeile aus 4 Zahlen). Eine leere Liste []
+# hätte keinen erkennbaren Typ -> Fehler "implicitly has an any type".
+# Danach hängen wir die restlichen Zeilen an. Start: überall 0 -> er weiss nichts.
+q_table = [[0.0, 0.0, 0.0, 0.0]]
+_s = 1
 while _s < NSTATES:
-    _row = []
-    _a = 0
-    while _a < 4:
-        _row.append(0.0)
-        _a += 1
-    q_table.append(_row)
+    q_table.append([0.0, 0.0, 0.0, 0.0])
     _s += 1
 
 
