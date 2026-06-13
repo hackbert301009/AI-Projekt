@@ -5,17 +5,22 @@
 # |_|  |_|_|_||_\__,_|_|  |_\__,_/__\___|   ein hackbert-projekt
 # =====================================================================
 #  Ein RL-Agent lernt LIVE den Weg durchs Labyrinth.
-#  Etappe 2 / 6:  "Der Wanderer"  --  jetzt bewegt sich was.
+#  Etappe 3 / 6:  "Das Gehirn"  --  ab jetzt wird gelernt!
 #
-#  Der Held latscht noch völlig planlos durch die Gegend (reiner
-#  Zufall, kein Gehirn). Aber: er hält sich an die Wände, mogelt
-#  nicht durch Mauern und feiert jeden Zufallstreffer am Ziel.
-#  Das Lernen kommt in Etappe 3.  -- hackbert
+#  Schluss mit planlosem Irren. Der Agent betreibt jetzt tabulares
+#  Q-Learning: er probiert Aktionen aus, kassiert Belohnung bzw.
+#  Strafe und merkt sich in einer Tabelle, wie gut jede Aktion in
+#  jedem Feld ist. Mit der Zeit findet er von selbst den kurzen Weg.
+#
+#  Beobachte oben die Zahlen: "best" (kuerzeste je gefundene Strecke)
+#  sinkt, "eps" (Lust auf Experimente) faellt -> er wird zielstrebig.
+#  -- hackbert
 # =====================================================================
 
 # ---------- Welt-Geometrie ----------
 GW = 8          # Spalten
 GH = 6          # Zeilen
+NSTATES = 48    # Anzahl Felder = GW * GH  (jedes Feld ist ein "Zustand")
 CELL = 18       # Pixel pro Zelle
 OX = 8          # Gitter-Offset x (Rand links)
 OY = 11         # Gitter-Offset y (HUD-Leiste sitzt drüber)
@@ -29,8 +34,24 @@ GOAL_R = 0
 WALLS = [[2, 1], [2, 2], [2, 3], [2, 4], [5, 1], [5, 2], [5, 3], [5, 4]]
 
 # ---------- Aktionen: 0=hoch  1=runter  2=links  3=rechts ----------
+# DX/DY sagen, wie sich Spalte/Zeile bei jeder Aktion verändern.
 DX = [0, 0, -1, 1]
 DY = [-1, 1, 0, 0]
+
+# ---------- Lern-Stellschrauben (die "Hyperparameter") ----------
+ALPHA = 0.3      # Lernrate: wie stark ein neuer Wert die alte Schätzung korrigiert
+GAMMA = 0.9      # Discount: wie wichtig zukünftige Belohnungen sind (0=gierig, 1=weitsichtig)
+EPS_START = 0.9  # Start-Neugier: anfangs zu 90% zufällig ausprobieren
+EPS_MIN = 0.05   # Rest-Neugier: nie ganz aufhören zu experimentieren
+EPS_DECAY = 0.992  # Neugier schrumpft pro Episode um diesen Faktor
+
+# Belohnungen: das Herz des Lernens. Der Agent maximiert die Summe.
+R_GOAL = 100.0   # Ziel erreicht -> dicke Belohnung
+R_WALL = -5.0    # gegen Wand/Rand -> kleine Strafe
+R_STEP = -1.0    # jeder Schritt kostet -> drängt zum kurzen Weg
+
+MAX_STEPS = 300        # Notbremse: dauert eine Episode zu lang, brechen wir ab
+STEPS_PER_FRAME = 8    # so viele Lernschritte pro Bild -> sichtbar schnelles Lernen
 
 # ---------- Farben (MakeCode-Arcade-Palette) ----------
 COL_BG = 15      # schwarz
@@ -39,14 +60,37 @@ COL_WALL = 11    # lila  -- die Mauern
 COL_GRID = 15    # schwarz -- dünne Gitterlinien
 COL_START = 4    # orange
 COL_GOAL = 5     # gelb
-COL_AGENT = 1    # weiss -- unser Wanderer
+COL_AGENT = 1    # weiss -- unser Agent
 COL_TEXT = 1     # weiss
 
 # ---------- Laufzeit-Zustand ----------
 agent_col = START_C
 agent_row = START_R
-steps = 0        # Schritte in der aktuellen Runde
-arrivals = 0     # wie oft das Ziel (zufällig) erreicht wurde
+episode = 0          # wie viele Anläufe der Agent schon hinter sich hat
+step_in_ep = 0       # Schritte in der aktuellen Episode
+epsilon = EPS_START  # aktuelle Experimentierfreude
+best_steps = 9999    # kürzeste je gefundene Strecke zum Ziel
+
+
+# ---------- Q-Tabelle: das Gedächtnis des Agenten ----------
+# q_table[zustand][aktion] = geschätzter Wert (erwartete künftige Belohnung).
+# Wir bauen sie mit Schleifen auf (das Static-Python von MakeCode mag keine
+# List-Comprehensions oder "[0]*n"-Tricks). Start: überall 0 -> er weiss nichts.
+q_table = []
+_s = 0
+while _s < NSTATES:
+    _row = []
+    _a = 0
+    while _a < 4:
+        _row.append(0.0)
+        _a += 1
+    q_table.append(_row)
+    _s += 1
+
+
+def state_of(c, r):
+    # Macht aus den Koordinaten (Spalte, Zeile) eine eindeutige Zustandsnummer.
+    return r * GW + c
 
 
 def is_wall(c, r):
@@ -59,41 +103,117 @@ def is_wall(c, r):
     return False
 
 
-# ---------- Bewegung: ein Zufallsschritt ----------
-def wander_step():
-    global agent_col, agent_row, steps, arrivals
+def best_action(s):
+    # Liefert die Aktion mit dem höchsten Q-Wert im Zustand s (die "gierige" Wahl).
+    ba = 0
+    bv = q_table[s][0]
+    a = 1
+    while a < 4:
+        if q_table[s][a] > bv:
+            bv = q_table[s][a]
+            ba = a
+        a += 1
+    return ba
 
-    a = randint(0, 3)
+
+def max_q(s):
+    # Liefert den besten Q-Wert im Zustand s (wie gut ist dieses Feld bestenfalls?).
+    m = q_table[s][0]
+    a = 1
+    while a < 4:
+        if q_table[s][a] > m:
+            m = q_table[s][a]
+        a += 1
+    return m
+
+
+def best_str():
+    # Hübsche Anzeige für "best": vor dem ersten Treffer ein "-".
+    if best_steps >= MAX_STEPS:
+        return "-"
+    return str(best_steps)
+
+
+# ---------- Der eigentliche Lernschritt (Q-Learning) ----------
+def learn_step():
+    global agent_col, agent_row, episode, step_in_ep, epsilon, best_steps
+
+    s = state_of(agent_col, agent_row)
+
+    # 1) Aktion wählen -- epsilon-greedy:
+    #    Mit Wahrscheinlichkeit epsilon zufällig (erkunden), sonst die
+    #    aktuell beste bekannte Aktion (ausnutzen, was man schon weiss).
+    if randint(0, 99) < epsilon * 100:
+        a = randint(0, 3)
+    else:
+        a = best_action(s)
+
+    # 2) Aktion ausführen und schauen, wo man landet.
     nc = agent_col + DX[a]
     nr = agent_row + DY[a]
-
-    # gegen Wand oder Rand gelaufen? -> stehen bleiben
+    hit_wall = False
     if nc < 0 or nc >= GW or nr < 0 or nr >= GH or is_wall(nc, nr):
-        return
+        nc = agent_col      # gegen Wand/Rand -> man bleibt stehen
+        nr = agent_row
+        hit_wall = True
 
+    reached_goal = (nc == GOAL_C and nr == GOAL_R)
+
+    # 3) Belohnung bestimmen.
+    if reached_goal:
+        reward = R_GOAL
+    elif hit_wall:
+        reward = R_WALL
+    else:
+        reward = R_STEP
+
+    # 4) Q-Wert aktualisieren -- die Bellman-Gleichung:
+    #    neuer Wert = alter Wert + ALPHA * (Belohnung + GAMMA * bester Folgewert - alter Wert)
+    #    Der Klammerausdruck ist der "Lernfehler": lag die Schätzung daneben,
+    #    wird kräftig korrigiert; war sie gut, kaum.
+    ns = state_of(nc, nr)
+    old_q = q_table[s][a]
+    q_table[s][a] = old_q + ALPHA * (reward + GAMMA * max_q(ns) - old_q)
+
+    # 5) In den neuen Zustand wechseln.
     agent_col = nc
     agent_row = nr
-    steps += 1
+    step_in_ep += 1
 
-    # Ziel zufällig getroffen -> feiern und zurück auf Los
-    if agent_col == GOAL_C and agent_row == GOAL_R:
-        arrivals += 1
-        steps = 0
+    # 6) Episode zu Ende? (Ziel erreicht oder Notbremse) -> Bilanz & Neustart.
+    if reached_goal or step_in_ep >= MAX_STEPS:
+        if reached_goal and step_in_ep < best_steps:
+            best_steps = step_in_ep
+        episode += 1
+        step_in_ep = 0
         agent_col = START_C
         agent_row = START_R
+        # Neugier abkühlen: mit jeder Episode etwas weniger Zufall.
+        epsilon = epsilon * EPS_DECAY
+        if epsilon < EPS_MIN:
+            epsilon = EPS_MIN
 
 
-# alle 120 ms ein Schritt -> man kann dem Wanderer beim Irren zusehen
-game.on_update_interval(120, wander_step)
+# Pro Bild gleich mehrere Lernschritte -> das Lernen geht sichtbar voran.
+def on_update():
+    i = 0
+    while i < STEPS_PER_FRAME:
+        learn_step()
+        i += 1
+
+
+game.on_update(on_update)
 
 
 # ---------- Rendering: das ganze Spielfeld selbst malen ----------
 def on_render(screen, camera):
-    # HUD-Leiste oben
+    # HUD-Leiste oben: Episode, beste Strecke, aktuelle Neugier (in %).
     screen.fill_rect(0, 0, 160, 10, COL_BG)
-    screen.print("E2 wanderer  Treffer:" + str(arrivals), 1, 1, COL_TEXT)
+    hud = "E3 Ep:" + str(episode) + " best:" + best_str()
+    hud = hud + " eps:" + str(int(epsilon * 100))
+    screen.print(hud, 1, 1, COL_TEXT)
 
-    # Alle Zellen durchgehen und einfärben
+    # Alle Zellen durchgehen und einfärben.
     r = 0
     while r < GH:
         c = 0
