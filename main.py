@@ -211,7 +211,7 @@ game.on_update(on_update)
 # fill_rect gibt es aber sicher -> ein 1x1-Rechteck IST ein einzelnes Pixel.
 # Damit setzen wir die Linie Pixel fuer Pixel (klassischer Bresenham,
 # funktioniert fuer waagerecht/senkrecht/diagonal).
-def line(screen, x0, y0, x1, y1, c):
+def line(screen: Image, x0: number, y0: number, x1: number, y1: number, c: number):
     dx = x1 - x0
     if dx < 0:
         dx = -dx
@@ -239,7 +239,7 @@ def line(screen, x0, y0, x1, y1, c):
 
 
 # ---------- Policy-Pfeil: zeigt die beste Aktion eines Feldes ----------
-def draw_arrow(screen, cx, cy, a):
+def draw_arrow(screen: Image, cx: number, cy: number, a: number):
     # Kurzer Strich vom Zellmittelpunkt (cx, cy) in Richtung der Aktion a.
     ex = cx + DX[a] * 6
     ey = cy + DY[a] * 6
