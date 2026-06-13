@@ -364,10 +364,10 @@ def draw_run_hud(screen: Image):
         screen.print(lbl, x, 1, AGENT_COLS[i])
         x = x + len(lbl) * 6 + 3
         i += 1
-    info = "x" + str(SPEEDS[speed_idx])
+    tail = "x" + str(SPEEDS[speed_idx])
     if paused:
-        info = info + " ||"
-    screen.print(info, x, 1, COL_TEXT)
+        tail = tail + " ||"
+    screen.print(tail, x, 1, COL_TEXT)
 
 
 # ---------- Rendering ----------
