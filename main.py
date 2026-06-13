@@ -209,7 +209,7 @@ def on_render(screen, camera):
     # HUD-Leiste oben: Episode, beste Strecke, aktuelle Neugier (in %).
     screen.fill_rect(0, 0, 160, 10, COL_BG)
     hud = "E4 Ep:" + str(episode) + " best:" + best_str()
-    hud = hud + " eps:" + str(int(epsilon * 100))
+    hud = hud + " eps:" + str(Math.round(epsilon * 100))
     screen.print(hud, 1, 1, COL_TEXT)
 
     # --- Wertebereich der Heatmap bestimmen ---
@@ -251,8 +251,10 @@ def on_render(screen, camera):
                 screen.fill_rect(cellx, celly, CELL, CELL, COL_WALL)
             else:
                 # Value (0..1 normiert) auf einen Rampen-Index abbilden.
+                # Math.round rundet zur naechsten Farbstufe (int() erwartet hier
+                # einen String, daher nehmen wir Math.round zum Runden von Zahlen).
                 v = max_q(state_of(c, r))
-                idx = int((v - vmin) / rng * (RAMPN - 1) + 0.5)
+                idx = Math.round((v - vmin) / rng * (RAMPN - 1))
                 if idx < 0:
                     idx = 0
                 if idx > RAMPN - 1:
