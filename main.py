@@ -206,20 +206,51 @@ def on_update():
 game.on_update(on_update)
 
 
+# ---------- Eigene Linien-Funktion (Bresenham) ----------
+# MakeCodes Image-Objekt hat in dieser Version kein draw_line. set_pixel gibt
+# es aber sicher -> wir setzen die Linie Pixel fuer Pixel selbst. Klassischer
+# Bresenham-Algorithmus, funktioniert fuer waagerecht/senkrecht/diagonal.
+def line(screen, x0, y0, x1, y1, c):
+    dx = x1 - x0
+    if dx < 0:
+        dx = -dx
+    dy = y1 - y0
+    if dy < 0:
+        dy = -dy
+    sx = 1
+    if x0 > x1:
+        sx = -1
+    sy = 1
+    if y0 > y1:
+        sy = -1
+    err = dx - dy
+    while True:
+        screen.set_pixel(x0, y0, c)
+        if x0 == x1 and y0 == y1:
+            break
+        e2 = 2 * err
+        if e2 > -dy:
+            err = err - dy
+            x0 = x0 + sx
+        if e2 < dx:
+            err = err + dx
+            y0 = y0 + sy
+
+
 # ---------- Policy-Pfeil: zeigt die beste Aktion eines Feldes ----------
 def draw_arrow(screen, cx, cy, a):
     # Kurzer Strich vom Zellmittelpunkt (cx, cy) in Richtung der Aktion a.
     ex = cx + DX[a] * 6
     ey = cy + DY[a] * 6
-    screen.draw_line(cx, cy, ex, ey, COL_ARROW)
+    line(screen, cx, cy, ex, ey, COL_ARROW)
     # Pfeilspitze: zwei kurze Striche von der Spitze schräg zurück.
     # (px, py) steht senkrecht zur Pfeilrichtung -> bildet das "V".
     bx = ex - DX[a] * 2
     by = ey - DY[a] * 2
     px = DY[a]
     py = DX[a]
-    screen.draw_line(ex, ey, bx + px * 2, by + py * 2, COL_ARROW)
-    screen.draw_line(ex, ey, bx - px * 2, by - py * 2, COL_ARROW)
+    line(screen, ex, ey, bx + px * 2, by + py * 2, COL_ARROW)
+    line(screen, ex, ey, bx - px * 2, by - py * 2, COL_ARROW)
 
 
 # ---------- Rendering: das ganze Spielfeld selbst malen ----------
