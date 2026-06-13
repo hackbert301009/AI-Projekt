@@ -5,15 +5,16 @@
 # |_|  |_|_|_||_\__,_|_|  |_\__,_/__\___|   ein hackbert-projekt
 # =====================================================================
 #  Ein RL-Agent lernt LIVE den Weg durchs Labyrinth.
-#  Etappe 4 / 6:  "Die Heatmap"  --  jetzt wird das Wissen sichtbar!
+#  Etappe 5 / 6:  "Die Strategie"  --  wohin wuerde der Agent laufen?
 #
-#  Der Agent lernt weiter per Q-Learning (wie in Etappe 3). Neu: wir
-#  faerben jedes Feld nach seinem Value ein -- das ist der beste
-#  Q-Wert des Feldes, also "wie gut ist es, hier zu stehen?".
-#  Kalt (blau) = weit weg / schlecht, heiss (rot) = nah am Ziel / gut.
+#  Heatmap (Etappe 4) zeigt, WIE GUT jedes Feld ist. Jetzt zeichnen wir
+#  zusaetzlich in jedes Feld einen kleinen Pfeil: die beste bekannte
+#  Aktion (hoch/runter/links/rechts) laut Q-Tabelle. Das ist die
+#  "Policy" -- die gelernte Strategie als Stroemungsfeld.
 #
-#  So entsteht live ein Farbverlauf, der vom Ziel aus durchs ganze
-#  Labyrinth "ausstrahlt". Genau das hat der Agent gelernt.  -- hackbert
+#  Anfangs zeigen alle Pfeile wirr in eine Richtung (noch kein Wissen),
+#  mit dem Lernen richten sie sich Feld fuer Feld Richtung Ziel aus.
+#  -- hackbert
 # =====================================================================
 
 # ---------- Welt-Geometrie ----------
@@ -59,6 +60,7 @@ COL_GRID = 15    # schwarz -- dünne Gitterlinien
 COL_GOAL = 5     # gelb
 COL_AGENT = 1    # weiss -- unser Agent
 COL_TEXT = 1     # weiss
+COL_ARROW = 1    # weiss -- Policy-Pfeile
 
 # Heatmap-Rampe: von kalt (blau) nach heiss (rot). Den Value eines Feldes
 # bilden wir auf einen dieser Farbindizes ab.
@@ -204,11 +206,27 @@ def on_update():
 game.on_update(on_update)
 
 
+# ---------- Policy-Pfeil: zeigt die beste Aktion eines Feldes ----------
+def draw_arrow(screen, cx, cy, a):
+    # Kurzer Strich vom Zellmittelpunkt (cx, cy) in Richtung der Aktion a.
+    ex = cx + DX[a] * 6
+    ey = cy + DY[a] * 6
+    screen.draw_line(cx, cy, ex, ey, COL_ARROW)
+    # Pfeilspitze: zwei kurze Striche von der Spitze schräg zurück.
+    # (px, py) steht senkrecht zur Pfeilrichtung -> bildet das "V".
+    bx = ex - DX[a] * 2
+    by = ey - DY[a] * 2
+    px = DY[a]
+    py = DX[a]
+    screen.draw_line(ex, ey, bx + px * 2, by + py * 2, COL_ARROW)
+    screen.draw_line(ex, ey, bx - px * 2, by - py * 2, COL_ARROW)
+
+
 # ---------- Rendering: das ganze Spielfeld selbst malen ----------
 def on_render(screen, camera):
     # HUD-Leiste oben: Episode, beste Strecke, aktuelle Neugier (in %).
     screen.fill_rect(0, 0, 160, 10, COL_BG)
-    hud = "E4 Ep:" + str(episode) + " best:" + best_str()
+    hud = "E5 Ep:" + str(episode) + " best:" + best_str()
     hud = hud + " eps:" + str(Math.round(epsilon * 100))
     screen.print(hud, 1, 1, COL_TEXT)
 
@@ -260,6 +278,10 @@ def on_render(screen, camera):
                 if idx > RAMPN - 1:
                     idx = RAMPN - 1
                 screen.fill_rect(cellx, celly, CELL, CELL, RAMP[idx])
+
+                # Policy-Pfeil zeichnen (nicht aufs Ziel, das hat keine Aktion).
+                if not (c == GOAL_C and r == GOAL_R):
+                    draw_arrow(screen, cellx + 9, celly + 9, best_action(state_of(c, r)))
 
             # dünne Gitterlinie drumherum
             screen.draw_rect(cellx, celly, CELL, CELL, COL_GRID)
