@@ -207,9 +207,10 @@ game.on_update(on_update)
 
 
 # ---------- Eigene Linien-Funktion (Bresenham) ----------
-# MakeCodes Image-Objekt hat in dieser Version kein draw_line. set_pixel gibt
-# es aber sicher -> wir setzen die Linie Pixel fuer Pixel selbst. Klassischer
-# Bresenham-Algorithmus, funktioniert fuer waagerecht/senkrecht/diagonal.
+# MakeCodes Image-Objekt hat in dieser Version weder draw_line noch set_pixel.
+# fill_rect gibt es aber sicher -> ein 1x1-Rechteck IST ein einzelnes Pixel.
+# Damit setzen wir die Linie Pixel fuer Pixel (klassischer Bresenham,
+# funktioniert fuer waagerecht/senkrecht/diagonal).
 def line(screen, x0, y0, x1, y1, c):
     dx = x1 - x0
     if dx < 0:
@@ -225,7 +226,7 @@ def line(screen, x0, y0, x1, y1, c):
         sy = -1
     err = dx - dy
     while True:
-        screen.set_pixel(x0, y0, c)
+        screen.fill_rect(x0, y0, 1, 1, c)   # 1x1-Rechteck = ein Pixel
         if x0 == x1 and y0 == y1:
             break
         e2 = 2 * err
