@@ -3,21 +3,34 @@
 > Ein **hackbert-Projekt** für MakeCode Arcade (Python).
 > Schau einer künstlichen Intelligenz beim Lernen zu — in echtzeit, auf einem Retro-Bildschirm.
 
-Ein Agent steht unten links (**S**), das Ziel wartet oben rechts (**Z**), dazwischen zwei
-fiese Wand-Riegel. Per **tabularem Q-Learning** (ε-greedy) tastet sich der Agent Episode
-für Episode an den optimalen Weg heran. Seine gelernte **Value-Funktion** wird als
-Heatmap (kalt → heiß) eingefärbt, seine **Strategie** als Pfeile pro Feld dargestellt.
+Mehrere Agenten starten unten links (**S**), das Ziel wartet oben rechts (**Z**), dazwischen
+zwei fiese Wand-Riegel. Jeder Agent hat sein **eigenes Gehirn** (Q-Tabelle) und ist
+unterschiedlich neugierig — ein **Wettrennen** ums schnellste Lernen. Per **tabularem
+Q-Learning** (ε-greedy) tastet sich jeder Episode für Episode an den optimalen Weg heran.
+Die gelernte **Value-Funktion** des Fokus-Agenten wird als Heatmap (kalt → heiß) eingefärbt,
+seine **Strategie** als Pfeile pro Feld dargestellt.
 
 Kein Trainingsdatensatz, keine Cloud — die ganze Intelligenz entsteht direkt auf dem Gerät.
 
 ## 🎮 Steuerung
 
+**Titelbildschirm:** **A** = Start · **Menu** = Einstellungen
+
+**Im Lauf:**
+
 | Taste | Wirkung |
 |-------|---------|
 | **A** | Pause / Weiter |
 | **B** | Lerntempo umschalten (x1 / x4 / x16 / x64) |
-| **↑** | Policy-Pfeile ein / aus |
-| **↓** | Zurücksetzen & neu lernen |
+| **↑** | Ansicht wechseln (Heatmap+Pfeile / Pfeile / nur Rennen / nur Heatmap) |
+| **↓** | Alles zurücksetzen & neu lernen |
+| **← / →** | Fokus-Agent wechseln (dessen Heatmap/Pfeile gezeigt werden) |
+| **Menu** | Einstellungen öffnen |
+
+**Einstellungen:** **↑/↓** wählen · **←/→** ändern · **A**/**Menu** = übernehmen & neu starten
+
+Einstellbar: **Anzahl Agenten** (1–4), **Alpha** (Lernrate), **Gamma** (Discount),
+**Decay** (Neugier-Abkühlung) und **Tempo**.
 
 ## 🗺️ Etappenplan
 
@@ -29,6 +42,7 @@ Das Projekt wächst in nachvollziehbaren, einzeln testbaren Etappen:
 4. **Die Heatmap** ✅ — Value-Funktion als Farbverlauf
 5. **Die Strategie** ✅ — Policy-Pfeile pro Feld
 6. **Der Feinschliff** ✅ — Steuerung, HUD, Politur
+7. **Der Ausbau** ✅ — Wettrennen (mehrere eigene Gehirne), Live-Tuning, Ansichts-Modi, Logo-Startbildschirm
 
 🎉 **Alle Etappen fertig!**
 
