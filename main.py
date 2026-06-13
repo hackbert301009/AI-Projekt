@@ -5,16 +5,15 @@
 # |_|  |_|_|_||_\__,_|_|  |_\__,_/__\___|   ein hackbert-projekt
 # =====================================================================
 #  Ein RL-Agent lernt LIVE den Weg durchs Labyrinth.
-#  Etappe 3 / 6:  "Das Gehirn"  --  ab jetzt wird gelernt!
+#  Etappe 4 / 6:  "Die Heatmap"  --  jetzt wird das Wissen sichtbar!
 #
-#  Schluss mit planlosem Irren. Der Agent betreibt jetzt tabulares
-#  Q-Learning: er probiert Aktionen aus, kassiert Belohnung bzw.
-#  Strafe und merkt sich in einer Tabelle, wie gut jede Aktion in
-#  jedem Feld ist. Mit der Zeit findet er von selbst den kurzen Weg.
+#  Der Agent lernt weiter per Q-Learning (wie in Etappe 3). Neu: wir
+#  faerben jedes Feld nach seinem Value ein -- das ist der beste
+#  Q-Wert des Feldes, also "wie gut ist es, hier zu stehen?".
+#  Kalt (blau) = weit weg / schlecht, heiss (rot) = nah am Ziel / gut.
 #
-#  Beobachte oben die Zahlen: "best" (kuerzeste je gefundene Strecke)
-#  sinkt, "eps" (Lust auf Experimente) faellt -> er wird zielstrebig.
-#  -- hackbert
+#  So entsteht live ein Farbverlauf, der vom Ziel aus durchs ganze
+#  Labyrinth "ausstrahlt". Genau das hat der Agent gelernt.  -- hackbert
 # =====================================================================
 
 # ---------- Welt-Geometrie ----------
@@ -55,13 +54,16 @@ STEPS_PER_FRAME = 8    # so viele Lernschritte pro Bild -> sichtbar schnelles Le
 
 # ---------- Farben (MakeCode-Arcade-Palette) ----------
 COL_BG = 15      # schwarz
-COL_FLOOR = 6    # teal  -- der begehbare Boden
 COL_WALL = 11    # lila  -- die Mauern
 COL_GRID = 15    # schwarz -- dünne Gitterlinien
-COL_START = 4    # orange
 COL_GOAL = 5     # gelb
 COL_AGENT = 1    # weiss -- unser Agent
 COL_TEXT = 1     # weiss
+
+# Heatmap-Rampe: von kalt (blau) nach heiss (rot). Den Value eines Feldes
+# bilden wir auf einen dieser Farbindizes ab.
+RAMP = [8, 9, 6, 7, 5, 4, 2]   # blau, hellblau, teal, gruen, gelb, orange, rot
+RAMPN = 7
 
 # ---------- Laufzeit-Zustand ----------
 agent_col = START_C
@@ -206,11 +208,38 @@ game.on_update(on_update)
 def on_render(screen, camera):
     # HUD-Leiste oben: Episode, beste Strecke, aktuelle Neugier (in %).
     screen.fill_rect(0, 0, 160, 10, COL_BG)
-    hud = "E3 Ep:" + str(episode) + " best:" + best_str()
+    hud = "E4 Ep:" + str(episode) + " best:" + best_str()
     hud = hud + " eps:" + str(int(epsilon * 100))
     screen.print(hud, 1, 1, COL_TEXT)
 
-    # Alle Zellen durchgehen und einfärben.
+    # --- Wertebereich der Heatmap bestimmen ---
+    # Wir brauchen kleinsten und groessten Value aller begehbaren Felder, um
+    # die Farben relativ dazu zu skalieren (sonst waere am Anfang alles gleich).
+    vmin = 0.0
+    vmax = 0.0
+    first = True
+    r = 0
+    while r < GH:
+        c = 0
+        while c < GW:
+            if not is_wall(c, r):
+                v = max_q(state_of(c, r))
+                if first:
+                    vmin = v
+                    vmax = v
+                    first = False
+                else:
+                    if v < vmin:
+                        vmin = v
+                    if v > vmax:
+                        vmax = v
+            c += 1
+        r += 1
+    rng = vmax - vmin
+    if rng <= 0:
+        rng = 1.0   # noch ist alles gleich (Start) -> Division durch 0 vermeiden
+
+    # --- Alle Zellen durchgehen und nach Value einfärben ---
     r = 0
     while r < GH:
         c = 0
@@ -221,17 +250,23 @@ def on_render(screen, camera):
             if is_wall(c, r):
                 screen.fill_rect(cellx, celly, CELL, CELL, COL_WALL)
             else:
-                screen.fill_rect(cellx, celly, CELL, CELL, COL_FLOOR)
+                # Value (0..1 normiert) auf einen Rampen-Index abbilden.
+                v = max_q(state_of(c, r))
+                idx = int((v - vmin) / rng * (RAMPN - 1) + 0.5)
+                if idx < 0:
+                    idx = 0
+                if idx > RAMPN - 1:
+                    idx = RAMPN - 1
+                screen.fill_rect(cellx, celly, CELL, CELL, RAMP[idx])
 
             # dünne Gitterlinie drumherum
             screen.draw_rect(cellx, celly, CELL, CELL, COL_GRID)
             c += 1
         r += 1
 
-    # Start markieren (orange Feld mit "S")
+    # Start markieren (nur Buchstabe "S", damit die Heatmap sichtbar bleibt)
     sx = OX + START_C * CELL
     sy = OY + START_R * CELL
-    screen.fill_rect(sx + 1, sy + 1, CELL - 2, CELL - 2, COL_START)
     screen.print("S", sx + 6, sy + 5, COL_TEXT)
 
     # Ziel markieren (gelber Rahmen mit "Z")
