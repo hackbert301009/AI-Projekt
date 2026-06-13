@@ -10,12 +10,12 @@ Heatmap (kalt → heiß) eingefärbt, seine **Strategie** als Pfeile pro Feld da
 
 Kein Trainingsdatensatz, keine Cloud — die ganze Intelligenz entsteht direkt auf dem Gerät.
 
-## 🎮 Steuerung (ab Etappe 6)
+## 🎮 Steuerung
 
 | Taste | Wirkung |
 |-------|---------|
 | **A** | Pause / Weiter |
-| **B** | Lerntempo umschalten |
+| **B** | Lerntempo umschalten (x1 / x4 / x16 / x64) |
 | **↑** | Policy-Pfeile ein / aus |
 | **↓** | Zurücksetzen & neu lernen |
 
@@ -25,10 +25,12 @@ Das Projekt wächst in nachvollziehbaren, einzeln testbaren Etappen:
 
 1. **Die Welt** ✅ — Gitter, Wände, Start & Ziel
 2. **Der Wanderer** ✅ — Agent bewegt sich zufällig, Kollision, Reset am Ziel
-3. **Das Gehirn** — Q-Tabelle, ε-greedy, Lernregel
-4. **Die Heatmap** — Value-Funktion als Farbverlauf
-5. **Die Strategie** — Policy-Pfeile pro Feld
-6. **Der Feinschliff** — Steuerung, HUD, Politur
+3. **Das Gehirn** ✅ — Q-Tabelle, ε-greedy, Lernregel
+4. **Die Heatmap** ✅ — Value-Funktion als Farbverlauf
+5. **Die Strategie** ✅ — Policy-Pfeile pro Feld
+6. **Der Feinschliff** ✅ — Steuerung, HUD, Politur
+
+🎉 **Alle Etappen fertig!**
 
 ## ✏️ Dieses Projekt in MakeCode bearbeiten
 

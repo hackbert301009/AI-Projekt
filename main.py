@@ -5,16 +5,19 @@
 # |_|  |_|_|_||_\__,_|_|  |_\__,_/__\___|   ein hackbert-projekt
 # =====================================================================
 #  Ein RL-Agent lernt LIVE den Weg durchs Labyrinth.
-#  Etappe 5 / 6:  "Die Strategie"  --  wohin wuerde der Agent laufen?
+#  Etappe 6 / 6:  "Der Feinschliff"  --  jetzt darfst DU mitspielen!
 #
-#  Heatmap (Etappe 4) zeigt, WIE GUT jedes Feld ist. Jetzt zeichnen wir
-#  zusaetzlich in jedes Feld einen kleinen Pfeil: die beste bekannte
-#  Aktion (hoch/runter/links/rechts) laut Q-Tabelle. Das ist die
-#  "Policy" -- die gelernte Strategie als Stroemungsfeld.
+#  Der Agent lernt wie gehabt (Q-Learning, Heatmap, Policy-Pfeile).
+#  Neu ist die Steuerung -- du kannst dem Lernen live beim Zusehen
+#  zuschrauben:
 #
-#  Anfangs zeigen alle Pfeile wirr in eine Richtung (noch kein Wissen),
-#  mit dem Lernen richten sie sich Feld fuer Feld Richtung Ziel aus.
-#  -- hackbert
+#     A      = Pause / Weiter
+#     B      = Lerntempo umschalten (x1 / x4 / x16 / x64)
+#     Hoch   = Policy-Pfeile ein- / ausblenden
+#     Runter = alles vergessen und neu lernen (Reset)
+#
+#  Fertig ist das Werk. Viel Spass beim Zuschauen, wie aus Chaos
+#  Koennen wird.  -- hackbert
 # =====================================================================
 
 # ---------- Welt-Geometrie ----------
@@ -51,7 +54,9 @@ R_WALL = -5.0    # gegen Wand/Rand -> kleine Strafe
 R_STEP = -1.0    # jeder Schritt kostet -> drängt zum kurzen Weg
 
 MAX_STEPS = 300        # Notbremse: dauert eine Episode zu lang, brechen wir ab
-STEPS_PER_FRAME = 8    # so viele Lernschritte pro Bild -> sichtbar schnelles Lernen
+
+# Lerntempo: so viele Lernschritte pro Bild. Mit B schaltet man durch.
+SPEEDS = [1, 4, 16, 64]
 
 # ---------- Farben (MakeCode-Arcade-Palette) ----------
 COL_BG = 15      # schwarz
@@ -74,6 +79,11 @@ episode = 0          # wie viele Anläufe der Agent schon hinter sich hat
 step_in_ep = 0       # Schritte in der aktuellen Episode
 epsilon = EPS_START  # aktuelle Experimentierfreude
 best_steps = 9999    # kürzeste je gefundene Strecke zum Ziel
+
+# Steuerung (per Tasten umschaltbar)
+paused = False       # A pausiert das Lernen
+show_arrows = True   # Hoch blendet die Policy-Pfeile ein/aus
+speed_idx = 2        # B schaltet das Tempo (Index in SPEEDS), Start: x16
 
 
 # ---------- Q-Tabelle: das Gedächtnis des Agenten ----------
@@ -195,10 +205,14 @@ def learn_step():
             epsilon = EPS_MIN
 
 
-# Pro Bild gleich mehrere Lernschritte -> das Lernen geht sichtbar voran.
+# Pro Bild mehrere Lernschritte -> das Lernen geht sichtbar voran.
+# Ist pausiert, machen wir nichts; sonst so viele Schritte wie das Tempo sagt.
 def on_update():
+    if paused:
+        return
+    n = SPEEDS[speed_idx]
     i = 0
-    while i < STEPS_PER_FRAME:
+    while i < n:
         learn_step()
         i += 1
 
@@ -258,8 +272,11 @@ def draw_arrow(screen: Image, cx: number, cy: number, a: number):
 def on_render(screen, camera):
     # HUD-Leiste oben: Episode, beste Strecke, aktuelle Neugier (in %).
     screen.fill_rect(0, 0, 160, 10, COL_BG)
-    hud = "E5 Ep:" + str(episode) + " best:" + best_str()
-    hud = hud + " eps:" + str(Math.round(epsilon * 100))
+    hud = "Ep:" + str(episode) + " b:" + best_str()
+    hud = hud + " e:" + str(Math.round(epsilon * 100))
+    hud = hud + " x" + str(SPEEDS[speed_idx])
+    if paused:
+        hud = hud + " ||"
     screen.print(hud, 1, 1, COL_TEXT)
 
     # --- Wertebereich der Heatmap bestimmen ---
@@ -311,8 +328,8 @@ def on_render(screen, camera):
                     idx = RAMPN - 1
                 screen.fill_rect(cellx, celly, CELL, CELL, RAMP[idx])
 
-                # Policy-Pfeil zeichnen (nicht aufs Ziel, das hat keine Aktion).
-                if not (c == GOAL_C and r == GOAL_R):
+                # Policy-Pfeil zeichnen (falls eingeblendet und nicht das Ziel).
+                if show_arrows and not (c == GOAL_C and r == GOAL_R):
                     draw_arrow(screen, cellx + 9, celly + 9, best_action(state_of(c, r)))
 
             # dünne Gitterlinie drumherum
@@ -341,3 +358,50 @@ def on_render(screen, camera):
 
 scene.set_background_color(COL_BG)
 scene.create_renderable(100, on_render)
+
+
+# ---------- Hackbert-Startbildschirm ----------
+# Kurzer Gruss zum Start; nach Tastendruck laeuft das Lernen los. Bewusst VOR
+# der Tasten-Registrierung, damit der A-Druck zum Schliessen nicht gleich
+# die Pause ausloest.
+game.splash("MindMaze", "ein hackbert-projekt")
+
+
+# ---------- Steuerung ----------
+def toggle_pause():
+    global paused
+    paused = not paused
+
+
+def cycle_speed():
+    global speed_idx
+    speed_idx = (speed_idx + 1) % len(SPEEDS)
+
+
+def toggle_arrows():
+    global show_arrows
+    show_arrows = not show_arrows
+
+
+def reset_learning():
+    # Alles vergessen: Q-Tabelle auf 0, Statistik & Neugier zuruecksetzen.
+    global episode, step_in_ep, epsilon, best_steps, agent_col, agent_row
+    s = 0
+    while s < NSTATES:
+        a = 0
+        while a < 4:
+            q_table[s][a] = 0.0
+            a += 1
+        s += 1
+    episode = 0
+    step_in_ep = 0
+    epsilon = EPS_START
+    best_steps = 9999
+    agent_col = START_C
+    agent_row = START_R
+
+
+controller.A.on_event(ControllerButtonEvent.PRESSED, toggle_pause)
+controller.B.on_event(ControllerButtonEvent.PRESSED, cycle_speed)
+controller.up.on_event(ControllerButtonEvent.PRESSED, toggle_arrows)
+controller.down.on_event(ControllerButtonEvent.PRESSED, reset_learning)
